@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
 /** Must match the dimension of the `vector(...)` column in Supabase. */
-const EMBEDDING_DIMENSIONS = 768;
+const EMBEDDING_DIMENSIONS = 3072;
 /**
  * `text-embedding-004` was shut down by Google on 2026-01-14. The default is
  * its current successor, truncated to 768 dims to fit the pgvector column.
@@ -227,7 +227,7 @@ export async function POST(request: Request) {
     if (values.length !== EMBEDDING_DIMENSIONS) {
       throw new Error(
         `Expected a ${EMBEDDING_DIMENSIONS}-dimensional embedding but received ${values.length}. ` +
-          `Make sure the embedding model matches the vector column in Supabase.`,
+        `Make sure the embedding model matches the vector column in Supabase.`,
       );
     }
     embedding = values;
@@ -249,7 +249,7 @@ export async function POST(request: Request) {
 
     const { data, error } = await supabase.rpc("match_clinical_pages", {
       query_embedding: embedding,
-      match_threshold: matchThreshold,
+      match_threshold: 0.0, // Hardcoded to 0.0 for debugging
       match_count: matchCount,
     });
 
