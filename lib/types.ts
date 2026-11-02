@@ -25,6 +25,8 @@ export interface SearchResponse {
 export interface ImageAssessment {
   assessable: boolean;
   summary: string;
+  clinicalName: string;
+  nameRationale: string;
   findings: string[];
   possibleCauses: string[];
   nextSteps: string[];
@@ -36,6 +38,7 @@ export interface ImageAssessment {
 export interface ImageSearchResponse {
   assessment: ImageAssessment;
   retrieval: SearchResponse | null;
+  atlasNameMatch?: { title: string; chapter: string | null; page_number: number | string | null };
   retrievalWarning?: string;
 }
 

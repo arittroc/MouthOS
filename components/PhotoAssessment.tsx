@@ -8,6 +8,12 @@ export function PhotoAssessment({ data }: { data: ImageSearchResponse }) {
       <span className="rounded-full border border-white/15 px-3 py-1 text-xs text-indigo-100">{a.assessable ? `${a.urgency} · suggested care urgency` : "Photo cannot be assessed"}</span>
     </div>
     <p className="mt-4 leading-7 text-slate-200">{a.summary}</p>
+    {a.clinicalName ? <div className="mt-5 rounded-2xl border border-cyan-300/20 bg-cyan-400/[0.06] p-4">
+      <p className="text-xs font-medium uppercase tracking-wider text-cyan-200">Suggested clinical name</p>
+      <p className="mt-1 text-xl font-semibold text-white">{a.clinicalName}</p>
+      {a.nameRationale ? <p className="mt-2 text-sm leading-6 text-slate-300">{a.nameRationale}</p> : null}
+      {data.atlasNameMatch ? <p className="mt-2 text-xs text-cyan-100">Mentioned in the atlas: {data.atlasNameMatch.title}{data.atlasNameMatch.chapter ? ` · ${data.atlasNameMatch.chapter}` : ""}{data.atlasNameMatch.page_number != null ? ` · page ${data.atlasNameMatch.page_number}` : ""}</p> : <p className="mt-2 text-xs text-slate-400">This name has not been verified against an atlas entry.</p>}
+    </div> : null}
     <p className="mt-2 text-xs text-slate-400">AI observations and possibilities, not a confirmed diagnosis.</p>
     <div className="mt-6 grid gap-6 sm:grid-cols-2">
       {([ ["Visible findings", a.findings], ["Possible causes and why", a.possibleCauses], ["What to do next", a.nextSteps] ] as const).map(([title, items]) => items.length ? <div key={title}>

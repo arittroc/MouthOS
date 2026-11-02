@@ -23,8 +23,10 @@ prepared in the browser as JPEGs, up to 2000 pixels along the longest edge.
 The API accepts at most 3 MB per photo, below Vercel's request limit.
 HEIC files must first be exported as JPEG.
 
-The server sends the photo to Gemini and returns visible findings, possible
-causes and their reasoning, suggested next steps, and limitations. These are
+The server sends the photo to Gemini and returns visible findings, a suggested
+clinical name when the appearance supports one, possible causes and their
+reasoning, suggested next steps, and limitations. The proposed name is checked
+against the text of the atlas before an atlas page reference is shown. These are
 tentative AI observations, not a diagnosis. Blurry or unrelated images should
 request a better photo. Related textbook passages are retrieved using the
 existing Supabase `match_clinical_pages` RPC; they do not verify the assessment.
