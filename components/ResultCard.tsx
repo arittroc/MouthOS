@@ -22,10 +22,16 @@ function scoreClasses(value: number) {
 interface ResultCardProps {
   result: ClinicalPage;
   index: number;
-  onOpen: (result: ClinicalPage) => void;
+  onOpen?: (result: ClinicalPage) => void;
+  onClick?: (result: ClinicalPage) => void;
 }
 
-export function ResultCard({ result, index, onOpen }: ResultCardProps) {
+export function ResultCard({ result, index, onOpen, onClick }: ResultCardProps) {
+  const handleSelect = () => {
+    if (onClick) onClick(result);
+    else if (onOpen) onOpen(result);
+  };
+
   const page =
     result.page_number === null || result.page_number === ""
       ? "—"
@@ -34,7 +40,7 @@ export function ResultCard({ result, index, onOpen }: ResultCardProps) {
 
   return (
     <article
-      onClick={() => onOpen(result)}
+      onClick={handleSelect}
       className="group relative cursor-pointer overflow-hidden rounded-3xl border border-white/10 bg-white/[0.04] p-5 text-left shadow-[0_1px_0_0_rgba(255,255,255,0.04)_inset] backdrop-blur-xl transition-all duration-300 ease-out animate-fade-up hover:-translate-y-1 hover:border-white/20 hover:bg-white/[0.07] hover:shadow-glass focus-within:border-white/20 focus-within:bg-white/[0.07] sm:p-6"
       style={{ animationDelay: `${Math.min(index, 8) * 70}ms` }}
     >
@@ -112,11 +118,11 @@ export function ResultCard({ result, index, onOpen }: ResultCardProps) {
             type="button"
             onClick={(event) => {
               event.stopPropagation();
-              onOpen(result);
+              handleSelect();
             }}
             className="focus-ring inline-flex shrink-0 items-center gap-1.5 rounded-lg text-[12px] font-medium text-indigo-200/80 transition-all duration-300 hover:text-white group-hover:text-indigo-100 sm:translate-x-1 sm:opacity-0 sm:group-hover:translate-x-0 sm:group-hover:opacity-100 sm:group-focus-within:translate-x-0 sm:group-focus-within:opacity-100"
           >
-            View Full Record
+            View Clinical Image
             <ArrowUpRight
               className="h-3.5 w-3.5 transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
               aria-hidden="true"

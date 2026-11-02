@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 
 import { AmbientBackground } from "@/components/AmbientBackground";
-import { RecordDialog } from "@/components/RecordDialog";
+import { ImageModal } from "@/components/ImageModal";
 import { ResultCard } from "@/components/ResultCard";
 import type {
   ClinicalPage,
@@ -45,7 +45,7 @@ export default function Home() {
   const [results, setResults] = useState<ClinicalPage[] | null>(null);
   const [meta, setMeta] = useState<SearchResponse["meta"] | null>(null);
   const [error, setError] = useState<SearchError | null>(null);
-  const [selected, setSelected] = useState<ClinicalPage | null>(null);
+  const [selectedResult, setSelectedResult] = useState<ClinicalPage | null>(null);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const requestRef = useRef<AbortController | null>(null);
@@ -136,7 +136,7 @@ export default function Home() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  const closeRecord = useCallback(() => setSelected(null), []);
+  const closeImageModal = useCallback(() => setSelectedResult(null), []);
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -346,7 +346,7 @@ export default function Home() {
                     key={`${result.id ?? result.title}-${index}`}
                     result={result}
                     index={index}
-                    onOpen={setSelected}
+                    onOpen={setSelectedResult}
                   />
                 ))}
               </div>
@@ -396,8 +396,8 @@ export default function Home() {
         </div>
       </footer>
 
-      {selected ? (
-        <RecordDialog record={selected} onClose={closeRecord} />
+      {selectedResult ? (
+        <ImageModal result={selectedResult} onClose={closeImageModal} />
       ) : null}
 
       <p className="sr-only" role="status">
