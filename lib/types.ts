@@ -22,6 +22,23 @@ export interface SearchResponse {
   };
 }
 
+export interface ImageAssessment {
+  assessable: boolean;
+  summary: string;
+  findings: string[];
+  possibleCauses: string[];
+  nextSteps: string[];
+  limitations: string;
+  urgency: "emergency" | "urgent" | "routine" | "uncertain";
+  searchQuery: string;
+}
+
+export interface ImageSearchResponse {
+  assessment: ImageAssessment;
+  retrieval: SearchResponse | null;
+  retrievalWarning?: string;
+}
+
 export type SearchErrorCode =
   | "CONFIG"
   | "INVALID_QUERY"

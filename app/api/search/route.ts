@@ -16,7 +16,7 @@ export const maxDuration = 30;
 const EMBEDDING_DIMENSIONS = 3072;
 /**
  * `text-embedding-004` was shut down by Google on 2026-01-14. The default is
- * its current successor, truncated to 768 dims to fit the pgvector column.
+ * its successor, configured for the existing 3072-dimensional index.
  * Override with GEMINI_EMBEDDING_MODEL when your index used another model.
  */
 const DEFAULT_EMBEDDING_MODEL = "gemini-embedding-001";
@@ -208,12 +208,12 @@ export async function POST(request: Request) {
   // 1. Embed the query with Gemini.
   let embedding: number[];
   try {
-    const ai = new GoogleGenAI({ apiKey: geminiApiKey });
+    const ai = new GoogleGenAI({ apiKey: geminiApiKey, httpOptions: { timeout: 15000, retryOptions: { attempts: 1 } } });
     const response = await ai.models.embedContent({
       model: embeddingModel,
       contents: query,
       // `gemini-embedding-001` returns 3072 dims by default and must be
-      // truncated to the pgvector column width. `text-embedding-004` is
+      // configured to match the pgvector column width. `text-embedding-004` is
       // natively 768 and rejects the flag if it is ever restored.
       config: embeddingModel.includes("text-embedding-004")
         ? undefined
@@ -245,11 +245,12 @@ export async function POST(request: Request) {
   try {
     const supabase = createClient(supabaseUrl, supabaseServiceRoleKey, {
       auth: { persistSession: false, autoRefreshToken: false },
+      global: { fetch: (url, init) => fetch(url, { ...init, signal: AbortSignal.timeout(8000) }) },
     });
 
     const { data, error } = await supabase.rpc("match_clinical_pages", {
       query_embedding: embedding,
-      match_threshold: 0.0, // Hardcoded to 0.0 for debugging
+      match_threshold: matchThreshold,
       match_count: matchCount,
     });
 

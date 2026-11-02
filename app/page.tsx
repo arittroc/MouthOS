@@ -6,6 +6,7 @@ import {
   AlertTriangle,
   ArrowRight,
   BookOpen,
+  ImagePlus,
   FileText,
   Layers,
   Loader2,
@@ -14,6 +15,9 @@ import {
   Sparkles,
 } from "lucide-react";
 
+import { PhotoInput } from "@/components/PhotoInput";
+import { PhotoAssessment } from "@/components/PhotoAssessment";
+import type { ImageSearchResponse } from "@/lib/types";
 import { AmbientBackground } from "@/components/AmbientBackground";
 import { ImageModal } from "@/components/ImageModal";
 import { ResultCard } from "@/components/ResultCard";
@@ -39,6 +43,9 @@ interface SearchError {
 }
 
 export default function Home() {
+  const [photo, setPhoto] = useState<File | null>(null);
+  const [photoResult, setPhotoResult] = useState<ImageSearchResponse | null>(null);
+  const [showPhotos, setShowPhotos] = useState(true);
   const [query, setQuery] = useState("");
   const [submittedQuery, setSubmittedQuery] = useState("");
   const [status, setStatus] = useState<Status>("idle");
@@ -50,9 +57,9 @@ export default function Home() {
   const inputRef = useRef<HTMLInputElement>(null);
   const requestRef = useRef<AbortController | null>(null);
 
-  const runSearch = useCallback(async (raw: string) => {
+  const runSearch = useCallback(async (raw: string, image: File | null = null) => {
     const value = raw.trim();
-    if (value.length < 2) {
+    if (!image && value.length < 2) {
       setError({ message: "Enter at least 2 characters to search the atlas." });
       setStatus("error");
       return;
@@ -64,17 +71,23 @@ export default function Home() {
 
     setStatus("loading");
     setError(null);
-    setSubmittedQuery(value);
+    setResults(null);
+    setMeta(null);
+    setPhotoResult(null);
+    setSubmittedQuery(value || "Dental photo");
 
     try {
-      const response = await fetch("/api/search", {
+      const form = new FormData();
+      if (image) { form.set("image", image); form.set("query", value); }
+      const response = await fetch(image ? "/api/image-search" : "/api/search", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: value }),
+        headers: image ? undefined : { "Content-Type": "application/json" },
+        body: image ? form : JSON.stringify({ query: value }),
         signal: controller.signal,
       });
 
       const payload: unknown = await response.json().catch(() => null);
+      if (controller.signal.aborted) return;
 
       if (!response.ok) {
         const apiError = payload as SearchErrorResponse | null;
@@ -92,11 +105,14 @@ export default function Home() {
         return;
       }
 
-      const data = payload as SearchResponse;
-      setResults(Array.isArray(data.results) ? data.results : []);
-      setMeta(data.meta ?? null);
+      const photoData = image ? payload as ImageSearchResponse : null;
+      if (photoData) setPhotoResult(photoData);
+      const data = photoData ? photoData.retrieval : payload as SearchResponse;
+      setResults(data ? (Array.isArray(data.results) ? data.results : []) : null);
+      setMeta(data?.meta ?? null);
       setStatus("success");
     } catch (fetchError) {
+      if (controller.signal.aborted) return;
       if (fetchError instanceof DOMException && fetchError.name === "AbortError") {
         return;
       }
@@ -141,10 +157,11 @@ export default function Home() {
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (status === "loading") return;
-    void runSearch(query);
+    void runSearch(query, photo);
   };
 
   const handleExample = (example: string) => {
+    setPhoto(null);
     setQuery(example);
     void runSearch(example);
   };
@@ -182,7 +199,7 @@ export default function Home() {
           <div className="flex items-center gap-2">
             <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[11px] font-medium text-slate-400 backdrop-blur">
               <Layers className="h-3 w-3 text-indigo-300" aria-hidden="true" />
-              pgvector · 768d
+              Photo + text search
             </span>
             <span className="hidden items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[11px] font-medium text-slate-400 backdrop-blur sm:inline-flex">
               <Sparkles className="h-3 w-3 text-violet-300" aria-hidden="true" />
@@ -214,9 +231,9 @@ export default function Home() {
           </h1>
 
           <p className="mt-6 max-w-xl text-pretty text-[15px] leading-7 text-slate-400 sm:text-base">
-            Describe a condition, technique, or treatment in plain language.
-            MouthOS embeds your question and retrieves the closest indexed pages —
-            cited by chapter and page.
+            Upload a dental photo or take one with your mobile camera. Get an
+            explanation of visible findings and possible causes, with related
+            atlas references. You can also search by text alone.
           </p>
 
           {/* ── Search ─────────────────────────────────────── */}
@@ -251,6 +268,7 @@ export default function Home() {
                 placeholder="e.g. surgical management of osteonecrosis"
                 className="h-12 min-w-0 flex-1 bg-transparent text-[15px] text-white placeholder:text-slate-500/80 focus:outline-none [&::-webkit-search-cancel-button]:appearance-none"
               />
+              <button type="button" disabled={loading} onClick={() => setShowPhotos(value => !value)} aria-label="Photo search options" aria-expanded={showPhotos} className="focus-ring shrink-0 rounded-xl bg-indigo-500/20 p-3 text-indigo-200"><ImagePlus className="h-5 w-5" /></button>
               <kbd className="hidden shrink-0 rounded-md border border-white/10 bg-white/[0.04] px-1.5 py-0.5 font-mono text-[10px] text-slate-500 lg:inline-block">
                 ⌘K
               </kbd>
@@ -274,6 +292,7 @@ export default function Home() {
                 </span>
               </button>
             </div>
+            {showPhotos ? <PhotoInput file={photo} disabled={loading} onChange={file => { setPhoto(file); setPhotoResult(null); setResults(null); setMeta(null); setStatus("idle"); setError(null); }} /> : null}
           </form>
 
           <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
@@ -299,14 +318,16 @@ export default function Home() {
             <ErrorPanel
               error={error}
               onRetry={
-                submittedQuery.length >= 2
-                  ? () => void runSearch(submittedQuery)
+                (photo || submittedQuery.length >= 2)
+                  ? () => void runSearch(query, photo)
                   : undefined
               }
             />
           ) : null}
 
-          {loading ? <SearchSkeleton /> : null}
+          {loading ? <><p role="status" className="mb-4 text-sm text-indigo-200">{photo ? "Assessing your photo and finding related references…" : "Finding related atlas passages…"}</p><SearchSkeleton /></> : null}
+
+          {photoResult ? <PhotoAssessment data={photoResult} /> : null}
 
           {hasResults && results ? (
             <section>
@@ -389,9 +410,9 @@ export default function Home() {
             MouthOS · Clinical Atlas
           </div>
           <p className="max-w-2xl text-[11px] leading-relaxed text-slate-500/80">
-            Reference material for licensed clinicians. This tool retrieves
-            indexed pages — it does not provide diagnosis or treatment advice.
-            Always verify against the original source.
+            For patients and clinicians. AI photo assessments can be wrong and cannot
+            confirm a diagnosis or cause. A dentist must assess clinical concerns.
+            Always verify atlas references against the original source.
           </p>
         </div>
       </footer>
@@ -519,8 +540,8 @@ function HowItWorks() {
   const steps = [
     {
       icon: Sparkles,
-      label: "Embed",
-      copy: "Gemini converts your question into a 768-dimensional vector.",
+      label: "Photo or text",
+      copy: "Describe symptoms or attach a dental photo for an AI assessment.",
     },
     {
       icon: Layers,
